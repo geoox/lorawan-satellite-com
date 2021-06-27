@@ -2,30 +2,42 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
+import 'package:satellite_com_client/utils/keys.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class DashboardPage extends StatefulWidget {
+class ConnectionPage extends StatefulWidget {
   @override
-  State<StatefulWidget> createState() => DashboardState();
+  State<StatefulWidget> createState() => ConnectionPageState();
 }
 
-class DashboardState extends State<DashboardPage> {
+class ConnectionPageState extends State<ConnectionPage> {
   String message;
   FlutterBlue flutterBlue;
   bool isConnected = false;
   ScanResult scanResult;
+  SharedPreferences prefs;
 
   @override
   void initState() {
     super.initState();
 
     flutterBlue = FlutterBlue.instance;
+    initSharedPref();
+  }
+
+  void initSharedPref() async {
+    prefs = await SharedPreferences.getInstance();
   }
 
   void onSendPress() async {
     List<BluetoothService> services =
         await this.scanResult.device.discoverServices();
     services.forEach((service) async {
+      print('services');
+      print(services);
       for (BluetoothCharacteristic c in service.characteristics) {
+        print('service characteristics');
+        print(service.characteristics);
         await c.write(utf8.encode(this.message));
       }
     });
@@ -47,6 +59,9 @@ class DashboardState extends State<DashboardPage> {
     await scanResult.device
         .connect(timeout: Duration(seconds: 20), autoConnect: false);
     this.scanResult = scanResult;
+    prefs.setBool(Keys.bluetoothKey, true); // set bt key to true
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Device connected via Bluetooth')));
   }
 
   @override
@@ -61,29 +76,35 @@ class DashboardState extends State<DashboardPage> {
       child: Column(
         children: [
           StreamBuilder<List<BluetoothDevice>>(
-            stream: Stream.periodic(Duration(seconds: 2))
+            stream: Stream.periodic(Duration(seconds: 1))
                 .asyncMap((_) => FlutterBlue.instance.connectedDevices),
             initialData: [],
             builder: (c, snapshot) => Column(
               children: snapshot.data
-                  .map((d) => ListTile(
-                        title: Text(d.name),
-                        subtitle: Text(d.id.toString()),
-                        trailing: StreamBuilder<BluetoothDeviceState>(
-                          stream: d.state,
-                          initialData: BluetoothDeviceState.disconnected,
-                          builder: (c, snapshot) {
-                            if (snapshot.data ==
-                                BluetoothDeviceState.connected) {
-                              return ElevatedButton(
-                                child: Text('CONNECTED'),
-                                onPressed: () => {},
-                              );
-                            }
-                            return Text(snapshot.data.toString());
-                          },
-                        ),
-                      ))
+                  .map(
+                    (d) => ListTile(
+                      title: Text(d.name),
+                      // subtitle: Text(d.id.toString()),
+                      trailing: StreamBuilder<BluetoothDeviceState>(
+                        stream: d.state,
+                        initialData: BluetoothDeviceState.disconnected,
+                        builder: (c, snapshot) {
+                          if (snapshot.data == BluetoothDeviceState.connected) {
+                            return ElevatedButton(
+                              child: Text('Disconnect'),
+                              onPressed: () {
+                                d.disconnect();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text('Device disconnected')));
+                              },
+                            );
+                          }
+                          return Text(snapshot.data.toString());
+                        },
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),
@@ -105,7 +126,11 @@ class DashboardState extends State<DashboardPage> {
                             Text(
                               r.device.id.toString(),
                               style: Theme.of(context).textTheme.caption,
-                            )
+                            ),
+                            Divider(),
+                            SizedBox(
+                              height: 6,
+                            ),
                           ],
                         ),
                       ))
@@ -173,21 +198,23 @@ class DashboardState extends State<DashboardPage> {
 
     return Scaffold(
       body: SafeArea(
-        child: Container(
-          child: Padding(
-            padding: const EdgeInsets.all(36.0),
-            child: Column(
-              children: [
-                prompt,
-                verticalSpace,
-                message,
-                verticalSpace,
-                sendButton,
-                verticalSpace,
-                scanButton,
-                verticalSpace,
-                availableDevices
-              ],
+        child: SingleChildScrollView(
+          child: Container(
+            child: Padding(
+              padding: const EdgeInsets.all(36.0),
+              child: Column(
+                children: [
+                  prompt,
+                  verticalSpace,
+                  message,
+                  verticalSpace,
+                  sendButton,
+                  verticalSpace,
+                  scanButton,
+                  verticalSpace,
+                  availableDevices
+                ],
+              ),
             ),
           ),
         ),

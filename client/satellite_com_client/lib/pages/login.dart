@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:satellite_com_client/pages/dashboard.dart';
+import 'package:satellite_com_client/pages/connection_page.dart';
+import 'package:satellite_com_client/pages/dashboard_page.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -10,7 +11,10 @@ class _LoginState extends State<LoginPage> {
   void onLoginPress(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => DashboardPage()),
+      MaterialPageRoute(
+          builder: (context) => DashboardPage(
+                index: 0,
+              )),
     );
   }
 
