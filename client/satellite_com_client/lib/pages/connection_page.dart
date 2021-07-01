@@ -1,8 +1,6 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
-import 'package:satellite_com_client/utils/keys.dart';
+import 'package:satellite_com_client/services/bluetooth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectionPage extends StatefulWidget {
@@ -12,54 +10,32 @@ class ConnectionPage extends StatefulWidget {
 
 class ConnectionPageState extends State<ConnectionPage> {
   String message;
-  FlutterBlue flutterBlue;
+  // FlutterBlue flutterBlue;
   bool isConnected = false;
-  ScanResult scanResult;
+  // ScanResult scanResult;
   SharedPreferences prefs;
 
   @override
   void initState() {
     super.initState();
 
-    flutterBlue = FlutterBlue.instance;
-    initSharedPref();
-  }
-
-  void initSharedPref() async {
-    prefs = await SharedPreferences.getInstance();
+    BtService.initBtService();
   }
 
   void onSendPress() async {
-    List<BluetoothService> services =
-        await this.scanResult.device.discoverServices();
-    services.forEach((service) async {
-      print('services');
-      print(services);
-      for (BluetoothCharacteristic c in service.characteristics) {
-        print('service characteristics');
-        print(service.characteristics);
-        await c.write(utf8.encode(this.message));
-      }
-    });
+    BtService.sendStringMessage(this.message);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Message successfully sent')));
   }
 
   void onScanPress() {
-    print('scan pressed');
-    flutterBlue.startScan(timeout: Duration(seconds: 4));
-    // flutterBlue.scanResults.listen((results) {
-    //   for (ScanResult r in results) {
-    //     // print(
-    //     //     'id: ${r.device.id}; name: ${r.device.name}; type: ${r.device.type}; signal: ${r.rssi}; adv-date: ${r.advertisementData}');
-    //     print(r.device.name + "\n");
-    //   }
-    // });
+    BtService.scanBtDevices();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Scanning bluetooth devices..')));
   }
 
   void onConnect(ScanResult scanResult) async {
-    await scanResult.device
-        .connect(timeout: Duration(seconds: 20), autoConnect: false);
-    this.scanResult = scanResult;
-    prefs.setBool(Keys.bluetoothKey, true); // set bt key to true
+    BtService.connectToDevice(scanResult);
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Device connected via Bluetooth')));
   }
@@ -109,31 +85,33 @@ class ConnectionPageState extends State<ConnectionPage> {
             ),
           ),
           StreamBuilder<List<ScanResult>>(
-            stream: FlutterBlue.instance.scanResults,
+            stream: BtService.flutterBlue.scanResults,
             initialData: [],
             builder: (c, snapshot) => Column(
               children: snapshot.data
-                  .map((r) => InkWell(
-                        onTap: () => onConnect(r),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              r.device.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              r.device.id.toString(),
-                              style: Theme.of(context).textTheme.caption,
-                            ),
-                            Divider(),
-                            SizedBox(
-                              height: 6,
-                            ),
-                          ],
-                        ),
-                      ))
+                  .map(
+                    (r) => InkWell(
+                      onTap: () => onConnect(r),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            r.device.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            r.device.id.toString(),
+                            style: Theme.of(context).textTheme.caption,
+                          ),
+                          Divider(),
+                          SizedBox(
+                            height: 6,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),

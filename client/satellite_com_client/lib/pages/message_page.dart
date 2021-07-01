@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_blue/flutter_blue.dart';
+import 'package:satellite_com_client/services/bluetooth_service.dart';
 import 'package:satellite_com_client/utils/icons.dart';
-import 'package:satellite_com_client/utils/keys.dart';
 import 'package:satellite_com_client/widgets/choice.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class MessagePage extends StatefulWidget {
   @override
@@ -12,13 +10,11 @@ class MessagePage extends StatefulWidget {
 
 class _MessagePageState extends State<MessagePage> {
   var binaryArray = [0, 0, 0, 0]; // array with choices
-  SharedPreferences prefs;
   bool isBtConnected = false;
 
   @override
   void initState() {
     super.initState();
-    initSharedPref();
   }
 
   void onSwitchChange(bool newValue, int arrayIndex) {
@@ -28,10 +24,7 @@ class _MessagePageState extends State<MessagePage> {
 
   void onSendPress() async {
     print('message sent!');
-  }
-
-  void initSharedPref() async {
-    prefs = await SharedPreferences.getInstance();
+    BtService.sendBytesMessage(binaryArray);
   }
 
   @override
